@@ -1,47 +1,147 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <title>Quiz AR</title>
+    <title>Quiz AR Mobile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/2.2.1/aframe/build/aframe-ar.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
 </head>
-<body style="margin: 0; overflow: hidden;">
-    <a-scene embedded arjs>
+<body style="margin: 0; font-family: Arial, sans-serif; overflow: hidden;">
+    
+    <!-- Camera Permission Button -->
+    <div id="start-button" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                                   background: #4CAF50; color: white; padding: 20px 40px; border: none; 
+                                   border-radius: 10px; font-size: 18px; cursor: pointer; z-index: 2000;">
+        <div>MULAI AR</div>
+        <div style="font-size: 12px; margin-top: 5px;">Tap untuk mengaktifkan kamera</div>
+    </div>
+
+    <!-- AR Scene -->
+    <a-scene 
+        id="ar-scene"
+        style="display: none;"
+        embedded 
+        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; sourceWidth: 1280; sourceHeight: 960; displayWidth: 1280; displayHeight: 960;"
+        vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true; antialias: true; alpha: true;"
+        loading-screen="enabled: false">
+        
         <a-marker preset="hiro" id="hiro-marker">
-           
-            <a-entity 
-                gltf-model="url(model/naruto_uzumaki_running_animation.glb)" 
-                scale="0.8 0.8 0.8" 
-                position="-1 0 0"
-                rotation="0 45 0"
-                animation-mixer="clip: mixamo.com; loop: repeat; crossFadeDuration: 0.5">
-            </a-entity>
+            <!-- Marker test dengan objek yang sangat mencolok -->
+            <a-text 
+                value="MARKER DETECTED!" 
+                position="0 3 0" 
+                align="center" 
+                color="#00FF00"
+                scale="5 5 5"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 2000">
+            </a-text>
             
-           
-            <a-entity 
-                gltf-model="url(model/kakashi.glb)" 
-                scale="0.6 0.6 0.6" 
-                position="1.2 0 -0.5"
-                rotation="0 -30 0"
-                animation-mixer="clip:Idle; loop: repeat; crossFadeDuration: 2">
-            </a-entity>
+            <a-box 
+                position="0 1 0" 
+                color="#FF0000"
+                scale="2 2 2"
+                animation="property: rotation; to: 360 0 360; loop: true; dur: 3000">
+            </a-box>
             
-            
-            <a-sound id="naruto_alive" src="url(model/naruto_alive.mp3)" autoplay="false" loop="true"></a-sound>
+            <!-- Test multiple markers -->
         </a-marker>
+        
+        <!-- Tambahan marker lain untuk testing -->
+        <a-marker preset="kanji" id="kanji-marker">
+            <a-sphere 
+                position="0 1 0" 
+                color="#0000FF"
+                scale="1 1 1">
+            </a-sphere>
+        </a-marker>
+
         <a-entity camera></a-entity>
     </a-scene>
+
+    <!-- Status Info -->
+    <div id="status" style="position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.8); 
+                             color: white; padding: 10px; border-radius: 5px; font-size: 12px; 
+                             z-index: 1000; display: none;">
+        Status: Loading...
+    </div>
+
     <script>
-        var marker = document.querySelector('#hiro-marker');
-        var sound = document.querySelector('#naruto_alive');
+        let arStarted = false;
         
-        marker.addEventListener('markerFound', function() {
-            sound.components.sound.playSound();
+        // Start AR function
+        function startAR() {
+            if (arStarted) return;
+            
+            const startButton = document.getElementById('start-button');
+            const arScene = document.getElementById('ar-scene');
+            const status = document.getElementById('status');
+            
+            // Request camera permission
+            navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: 'environment',
+                    width: { ideal: 1280 },
+                    height: { ideal: 960 }
+                } 
+            })
+            .then(function(stream) {
+                console.log('Camera permission granted');
+                
+                // Stop the stream (AR.js will handle it)
+                stream.getTracks().forEach(track => track.stop());
+                
+                // Hide button and show AR scene
+                startButton.style.display = 'none';
+                arScene.style.display = 'block';
+                status.style.display = 'block';
+                status.innerHTML = 'AR Aktif - Arahkan ke marker HIRO';
+                
+                arStarted = true;
+                
+                // Setup marker events untuk both markers
+                setTimeout(() => {
+                    setupMarkerEvents('hiro-marker', 'HIRO');
+                    setupMarkerEvents('kanji-marker', 'KANJI');
+                }, 2000);
+                
+            })
+            .catch(function(err) {
+                console.error('Camera access denied:', err);
+                startButton.innerHTML = '<div>AKSES KAMERA DITOLAK</div><div style="font-size: 12px;">Refresh dan izinkan kamera</div>';
+                startButton.style.background = '#F44336';
+            });
+        }
+        
+        function setupMarkerEvents(markerId, markerName) {
+            const marker = document.querySelector(`#${markerId}`);
+            const status = document.getElementById('status');
+            
+            if (marker && status) {
+                marker.addEventListener('markerFound', function() {
+                    console.log(`${markerName} marker found!`);
+                    status.innerHTML = `${markerName} MARKER TERDETEKSI! ✓`;
+                    status.style.background = 'rgba(76, 175, 80, 0.8)';
+                });
+
+                marker.addEventListener('markerLost', function() {
+                    console.log(`${markerName} marker lost`);
+                    status.innerHTML = 'Cari marker HIRO atau KANJI...';
+                    status.style.background = 'rgba(0, 0, 0, 0.8)';
+                });
+            }
+        }
+        
+        // Button click event
+        document.getElementById('start-button').addEventListener('click', startAR);
+        
+        // Touch event for mobile
+        document.getElementById('start-button').addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            startAR();
         });
         
-        marker.addEventListener('markerLost', function() {
-            sound.components.sound.stopSound();
-        });
     </script>
 </body>
 </html>
