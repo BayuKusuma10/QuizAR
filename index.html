@@ -1,29 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <title>Quiz AR</title>
+    <title>Quiz AR - Fixed</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/2.2.1/aframe/build/aframe-ar.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 </head>
-<body style="margin: 0; overflow: hidden;">
-    <a-scene embedded arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
-        <a-marker preset="hiro" id="hiro-marker" markerhandler>
-            <!-- Test Box instead of 3D models for debugging -->
+<body style="margin: 0; font-family: Arial, sans-serif;">
+    
+    <!-- Loading indicator -->
+    <div id="loading" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                              background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px; z-index: 1000;">
+        <div>Loading AR...</div>
+        <div style="font-size: 12px; margin-top: 10px;">Izinkan akses kamera</div>
+    </div>
+
+    <!-- Instructions -->
+    <div id="instructions" style="position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.7); 
+                                   color: white; padding: 10px; border-radius: 5px; font-size: 14px; z-index: 999;">
+        Arahkan kamera ke marker HIRO
+    </div>
+
+    <a-scene 
+        embedded 
+        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+        vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true;"
+        loading-screen="enabled: false">
+        
+        <a-assets>
+            <!-- Preload assets if needed -->
+        </a-assets>
+
+        <a-marker preset="hiro" id="hiro-marker">
+            <!-- Simple test objects -->
+            <a-text 
+                value="AR WORKS!" 
+                position="0 1.5 0" 
+                align="center" 
+                color="red" 
+                scale="2 2 2">
+            </a-text>
+            
             <a-box 
                 position="-1 0.5 0" 
                 rotation="0 45 0" 
-                color="red" 
-                scale="0.5 0.5 0.5">
+                color="#FF0000" 
+                scale="0.5 0.5 0.5"
+                animation="property: rotation; to: 0 405 0; loop: true; dur: 3000">
+                <a-text value="NARUTO" position="0 1 0" align="center" scale="0.5 0.5 0.5"></a-text>
             </a-box>
             
-            <a-box 
+            <a-cylinder 
                 position="1 0.5 0" 
-                rotation="0 -45 0" 
-                color="blue" 
-                scale="0.3 0.3 0.3">
-            </a-box>
-            
-            <!-- Commented out 3D models - uncomment when files are ready
+                radius="0.3" 
+                height="1" 
+                color="#0000FF"
+                animation="property: position; to: 1 1 0; dir: alternate; loop: true; dur: 2000">
+                <a-text value="KAKASHI" position="0 1 0" align="center" scale="0.5 0.5 0.5"></a-text>
+            </a-cylinder>
+
+            <!-- Uncomment setelah test berhasil
             <a-entity 
                 gltf-model="url(model/naruto_uzumaki_running_animation.glb)" 
                 scale="0.8 0.8 0.8" 
@@ -40,24 +77,47 @@
                 animation-mixer="clip:Idle; loop: repeat; crossFadeDuration: 2">
             </a-entity>
             -->
-            
-            <!-- Audio - commented out until file is ready
-            <a-sound id="naruto_alive" src="url(model/naruto_alive.mp3)" autoplay="false" loop="true"></a-sound>
-            -->
         </a-marker>
+
         <a-entity camera></a-entity>
     </a-scene>
+
     <script>
-        var marker = document.querySelector('#hiro-marker');
-        var sound = document.querySelector('#naruto_alive');
-        
-        marker.addEventListener('markerFound', function() {
-            sound.components.sound.playSound();
+        // Hide loading when AR starts
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.getElementById('loading').style.display = 'none';
+            }, 3000);
         });
+
+        // Marker events
+        const marker = document.querySelector('#hiro-marker');
+        const instructions = document.getElementById('instructions');
         
-        marker.addEventListener('markerLost', function() {
-            sound.components.sound.stopSound();
-        });
+        if (marker) {
+            marker.addEventListener('markerFound', function() {
+                console.log('Marker found!');
+                instructions.innerHTML = 'Marker detected! ✓';
+                instructions.style.background = 'rgba(0,128,0,0.7)';
+            });
+
+            marker.addEventListener('markerLost', function() {
+                console.log('Marker lost!');
+                instructions.innerHTML = 'Arahkan kamera ke marker HIRO';
+                instructions.style.background = 'rgba(0,0,0,0.7)';
+            });
+        }
+
+        // Camera permission check
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function(stream) {
+                console.log('Camera access granted');
+                stream.getTracks().forEach(track => track.stop());
+            })
+            .catch(function(err) {
+                console.error('Camera access denied:', err);
+                alert('Akses kamera diperlukan untuk AR. Silakan refresh dan izinkan akses kamera.');
+            });
     </script>
 </body>
 </html>
